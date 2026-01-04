@@ -7,6 +7,322 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String             @id @default(uuid())
+  email         String             @unique
+  passwordHash  String
+  firstName     String?
+  lastName      String?
+  phone         String?
+  role          Role               @default(CUSTOMER)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  metadata      Json?
+  addresses     Address[]
+  logs          AdminActivityLog[]
+  branchReviews BranchReview[]
+  carts         Cart[]
+  orders        Order[]
+  reviews       Review[]
+  tickets       SupportTicket[]
+  messages      TicketMessage[]
+}
+
+model Address {
+  id             String   @id @default(uuid())
+  userId         String
+  type           String   @default("shipping")
+  line1          String
+  line2          String?
+  city           String
+  state          String
+  postalCode     String
+  country        String   @default("India")
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id])
+  billingOrders  Order[]  @relation("BillingAddress")
+  shippingOrders Order[]  @relation("ShippingAddress")
+}
+
+model Product {
+  id               String                 @id @default(uuid())
+  sku              String                 @unique
+  name             String
+  slug             String                 @unique
+  shortDescription String?
+  longDescription  String?
+  basePrice        Float
+  compareAtPrice   Float?
+  status           String                 @default("draft")
+  brand            String?
+  metadata         Json?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  categoryId       String?
+  category         Category?              @relation(fields: [categoryId], references: [id])
+  media            ProductMedia[]
+  specs            ProductSpecification[]
+  variants         ProductVariant[]
+  reviews          Review[]
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String
+  slug        String     @unique
+  description String?
+  imageUrl    String?
+  isActive    Boolean    @default(true)
+  parentId    String?
+  metadata    Json?
+  parent      Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryToCategory")
+  products    Product[]
+}
+
+model ProductMedia {
+  id        String  @id @default(uuid())
+  productId String
+  url       String
+  altText   String?
+  position  Int     @default(0)
+  mediaType String  @default("image")
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model ProductSpecification {
+  id        String  @id @default(uuid())
+  productId String
+  key       String
+  value     String
+  group     String?
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model ProductVariant {
+  id             String      @id @default(uuid())
+  productId      String
+  sku            String      @unique
+  title          String
+  price          Float?
+  compareAtPrice Float?
+  metadata       Json?
+  createdAt      DateTime    @default(now())
+  cartItems      CartItem[]
+  inventory      Inventory?
+  orderItems     OrderItem[]
+  product        Product     @relation(fields: [productId], references: [id])
+}
+
+model Inventory {
+  id                String         @id @default(uuid())
+  variantId         String         @unique
+  quantity          Int            @default(0)
+  reserved          Int            @default(0)
+  lowStockThreshold Int            @default(5)
+  updatedAt         DateTime       @updatedAt
+  variant           ProductVariant @relation(fields: [variantId], references: [id])
+}
+
+model Review {
+  id           String   @id @default(uuid())
+  productId    String
+  userId       String?
+  rating       Int
+  title        String?
+  body         String?
+  status       String   @default("pending")
+  helpfulCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  product      Product  @relation(fields: [productId], references: [id])
+  user         User?    @relation(fields: [userId], references: [id])
+}
+
+model Coupon {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  type          String
+  value         Float
+  appliesTo     Json?
+  minOrderValue Float?
+  usageLimit    Int?
+  usageCount    Int       @default(0)
+  startDate     DateTime?
+  endDate       DateTime?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+}
+
+model Cart {
+  id           String     @id @default(uuid())
+  userId       String?
+  sessionToken String?    @unique
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  metadata     Json?
+  user         User?      @relation(fields: [userId], references: [id])
+  items        CartItem[]
+}
+
+model CartItem {
+  id        String         @id @default(uuid())
+  cartId    String
+  variantId String
+  quantity  Int
+  unitPrice Float
+  createdAt DateTime       @default(now())
+  cart      Cart           @relation(fields: [cartId], references: [id])
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+}
+
+model Order {
+  id                String          @id @default(uuid())
+  orderNumber       String          @unique
+  userId            String?
+  status            OrderStatus     @default(PENDING)
+  paymentStatus     PaymentStatus   @default(PENDING)
+  subtotal          Float
+  tax               Float
+  shippingCost      Float
+  discountTotal     Float
+  total             Float
+  billingAddressId  String
+  shippingAddressId String
+  shippingMethod    String?
+  trackingNumber    String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  metadata          Json?
+  billingAddress    Address         @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  shippingAddress   Address         @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  user              User?           @relation(fields: [userId], references: [id])
+  items             OrderItem[]
+  payments          Payment[]
+  tickets           SupportTicket[]
+}
+
+model OrderItem {
+  id              String         @id @default(uuid())
+  orderId         String
+  variantId       String
+  quantity        Int
+  unitPrice       Float
+  discountApplied Float
+  totalPrice      Float
+  order           Order          @relation(fields: [orderId], references: [id])
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+}
+
+model Payment {
+  id                String   @id @default(uuid())
+  orderId           String
+  provider          String
+  providerPaymentId String
+  amount            Float
+  status            String
+  methodDetails     Json?
+  createdAt         DateTime @default(now())
+  order             Order    @relation(fields: [orderId], references: [id])
+}
+
+model SupportTicket {
+  id         String          @id @default(uuid())
+  userId     String?
+  orderId    String?
+  subject    String
+  status     TicketStatus    @default(OPEN)
+  priority   String          @default("normal")
+  assignedTo String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  order      Order?          @relation(fields: [orderId], references: [id])
+  user       User?           @relation(fields: [userId], references: [id])
+  messages   TicketMessage[]
+}
+
+model TicketMessage {
+  id          String        @id @default(uuid())
+  ticketId    String
+  senderId    String?
+  message     String
+  attachments Json?
+  createdAt   DateTime      @default(now())
+  sender      User?         @relation(fields: [senderId], references: [id])
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id])
+}
+
+model AdminActivityLog {
+  id          String   @id @default(uuid())
+  adminUserId String
+  action      String
+  objectType  String
+  objectId    String
+  details     Json?
+  createdAt   DateTime @default(now())
+  adminUser   User     @relation(fields: [adminUserId], references: [id])
+}
+
+model Branch {
+  id              String         @id @default(uuid())
+  slug            String         @unique
+  name            String
+  area            String
+  address         String
+  description     String?
+  phone           String?
+  email           String?
+  googleMapsEmbed String?
+  latitude        Float?
+  longitude       Float?
+  openingTime     String?
+  closingTime     String?
+  workingDays     String?
+  imageUrl        String?
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  reviews         BranchReview[]
+}
+
+model BranchReview {
+  id           String    @id @default(uuid())
+  branchId     String
+  userId       String
+  rating       Int
+  title        String?
+  body         String?
+  adminReply   String?
+  adminReplyAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  branch       Branch    @relation(fields: [branchId], references: [id])
+  user         User      @relation(fields: [userId], references: [id])
+}
+
+model Testimonial {
+  id        String   @id @default(uuid())
+  name      String
+  role      String?
+  content   String
+  rating    Int?     @default(5)
+  avatarUrl String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Partner {
+  id         String   @id @default(uuid())
+  name       String
+  logoUrl    String
+  websiteUrl String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 enum Role {
   CUSTOMER
   ADMIN
@@ -35,330 +351,4 @@ enum TicketStatus {
   OPEN
   PENDING
   CLOSED
-}
-
-model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  passwordHash  String
-  firstName     String?
-  lastName      String?
-  phone         String?
-  role          Role      @default(CUSTOMER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  metadata      Json?
-
-  addresses     Address[]
-  orders        Order[]
-  reviews       Review[]
-  carts         Cart[]
-  tickets       SupportTicket[]
-  messages      TicketMessage[]
-  logs          AdminActivityLog[]
-  branchReviews BranchReview[]
-}
-
-model Address {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  type        String   @default("shipping") // billing/shipping
-  line1       String
-  line2       String?
-  city        String
-  state       String
-  postalCode  String
-  country     String   @default("India")
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  billingOrders  Order[] @relation("BillingAddress")
-  shippingOrders Order[] @relation("ShippingAddress")
-}
-
-model Product {
-  id               String    @id @default(uuid())
-  sku              String    @unique
-  name             String
-  slug             String    @unique
-  shortDescription String?
-  longDescription  String?
-  basePrice        Float
-  compareAtPrice   Float?
-  status           String    @default("draft") // published/draft/archived
-  brand            String?
-  metadata         Json?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  categoryId       String?
-  category         Category? @relation(fields: [categoryId], references: [id])
-  
-  media            ProductMedia[]
-  specs            ProductSpecification[]
-  variants         ProductVariant[]
-  reviews          Review[]
-}
-
-model Category {
-  id          String     @id @default(uuid())
-  name        String
-  slug        String     @unique
-  description String?
-  imageUrl    String?
-  isActive    Boolean    @default(true)
-  parentId    String?
-  parent      Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryToCategory")
-  metadata    Json?
-  products    Product[]
-}
-
-model ProductMedia {
-  id        String   @id @default(uuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  url       String
-  altText   String?
-  position  Int      @default(0)
-  mediaType String   @default("image") // image/video
-}
-
-model ProductSpecification {
-  id        String   @id @default(uuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  key       String
-  value     String
-  group     String?
-}
-
-model ProductVariant {
-  id             String   @id @default(uuid())
-  productId      String
-  product        Product  @relation(fields: [productId], references: [id])
-  sku            String   @unique
-  title          String
-  price          Float?
-  compareAtPrice Float?
-  metadata       Json?
-  createdAt      DateTime @default(now())
-
-  inventory      Inventory?
-  cartItems      CartItem[]
-  orderItems     OrderItem[]
-}
-
-model Inventory {
-  id                 String         @id @default(uuid())
-  variantId          String         @unique
-  variant            ProductVariant @relation(fields: [variantId], references: [id])
-  quantity           Int            @default(0)
-  reserved           Int            @default(0)
-  lowStockThreshold  Int            @default(5)
-  updatedAt          DateTime       @updatedAt
-}
-
-model Review {
-  id            String   @id @default(uuid())
-  productId     String
-  product       Product  @relation(fields: [productId], references: [id])
-  userId        String?
-  user          User?    @relation(fields: [userId], references: [id])
-  rating        Int
-  title         String?
-  body          String?
-  status        String   @default("pending") // approved/pending/rejected
-  helpfulCount  Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model Coupon {
-  id             String   @id @default(uuid())
-  code           String   @unique
-  type           String // percent, fixed, free_shipping
-  value          Float
-  appliesTo      Json? // product ids, category ids
-  minOrderValue  Float?
-  usageLimit     Int?
-  usageCount     Int      @default(0)
-  startDate      DateTime?
-  endDate        DateTime?
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-}
-
-model Cart {
-  id           String     @id @default(uuid())
-  userId       String?
-  user         User?      @relation(fields: [userId], references: [id])
-  sessionToken String?    @unique
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  metadata     Json?
-  items        CartItem[]
-}
-
-model CartItem {
-  id        String         @id @default(uuid())
-  cartId    String
-  cart      Cart           @relation(fields: [cartId], references: [id])
-  variantId String
-  variant   ProductVariant @relation(fields: [variantId], references: [id])
-  quantity  Int
-  unitPrice Float
-  createdAt DateTime       @default(now())
-}
-
-model Order {
-  id               String        @id @default(uuid())
-  orderNumber      String        @unique
-  userId           String?
-  user             User?         @relation(fields: [userId], references: [id])
-  status           OrderStatus   @default(PENDING)
-  paymentStatus    PaymentStatus @default(PENDING)
-  subtotal         Float
-  tax              Float
-  shippingCost     Float
-  discountTotal    Float
-  total            Float
-  billingAddressId String
-  billingAddress   Address       @relation("BillingAddress", fields: [billingAddressId], references: [id])
-  shippingAddressId String
-  shippingAddress  Address       @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
-  shippingMethod   String?
-  trackingNumber   String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  metadata         Json?
-
-  items            OrderItem[]
-  payments         Payment[]
-  tickets          SupportTicket[]
-}
-
-model OrderItem {
-  id              String         @id @default(uuid())
-  orderId         String
-  order           Order          @relation(fields: [orderId], references: [id])
-  variantId       String
-  variant         ProductVariant @relation(fields: [variantId], references: [id])
-  quantity        Int
-  unitPrice       Float
-  discountApplied Float
-  totalPrice      Float
-}
-
-model Payment {
-  id                String   @id @default(uuid())
-  orderId           String
-  order             Order    @relation(fields: [orderId], references: [id])
-  provider          String // stripe/paypal
-  providerPaymentId String
-  amount            Float
-  status            String
-  methodDetails     Json?
-  createdAt         DateTime @default(now())
-}
-
-model SupportTicket {
-  id         String       @id @default(uuid())
-  userId     String?
-  user       User?        @relation(fields: [userId], references: [id])
-  orderId    String?
-  order      Order?       @relation(fields: [orderId], references: [id])
-  subject    String
-  status     TicketStatus @default(OPEN)
-  priority   String       @default("normal")
-  assignedTo String?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-
-  messages   TicketMessage[]
-}
-
-model TicketMessage {
-  id          String   @id @default(uuid())
-  ticketId    String
-  ticket      SupportTicket @relation(fields: [ticketId], references: [id])
-  senderId    String?
-  sender      User?    @relation(fields: [senderId], references: [id])
-  message     String
-  attachments Json?
-  createdAt   DateTime @default(now())
-}
-
-model AdminActivityLog {
-  id          String   @id @default(uuid())
-  adminUserId String
-  adminUser   User     @relation(fields: [adminUserId], references: [id])
-  action      String
-  objectType  String
-  objectId    String
-  details     Json?
-  createdAt   DateTime @default(now())
-}
-
-// =================== BRANCH & REVIEWS ===================
-
-model Branch {
-  id              String    @id @default(uuid())
-  slug            String    @unique
-  name            String
-  area            String    // Perambur, Kolathur, Villivakkam
-  address         String
-  description     String?
-  phone           String?
-  email           String?
-  googleMapsEmbed String?   // Google Maps iframe embed URL
-  latitude        Float?
-  longitude       Float?
-  openingTime     String?   // e.g., "09:00"
-  closingTime     String?   // e.g., "21:00"
-  workingDays     String?   // e.g., "Mon-Sat"
-  imageUrl        String?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  reviews         BranchReview[]
-}
-
-model BranchReview {
-  id          String    @id @default(uuid())
-  branchId    String
-  branch      Branch    @relation(fields: [branchId], references: [id])
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  rating      Int       // 1-5
-  title       String?
-  body        String?
-  adminReply  String?   // Admin can reply to reviews
-  adminReplyAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Testimonial {
-  id        String   @id @default(uuid())
-  name      String
-  role      String?
-  content   String
-  rating    Int?     @default(5)
-  avatarUrl String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Partner {
-  id         String   @id @default(uuid())
-  name       String
-  logoUrl    String
-  websiteUrl String?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 }
