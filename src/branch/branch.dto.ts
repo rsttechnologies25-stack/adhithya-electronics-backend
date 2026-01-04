@@ -20,3 +20,101 @@ export class AdminReplyDto {
     @IsNotEmpty()
     reply: string;
 }
+
+export class CreateBranchDto {
+    @IsString()
+    @IsNotEmpty()
+    name: string;
+
+    @IsString()
+    @IsNotEmpty()
+    area: string;
+
+    @IsString()
+    @IsNotEmpty()
+    address: string;
+
+    @IsOptional()
+    @IsString()
+    description?: string;
+
+    @IsOptional()
+    @IsString()
+    phone?: string;
+
+    @IsOptional()
+    @IsString()
+    email?: string;
+
+    @IsOptional()
+    @IsString()
+    googleMapsEmbed?: string;
+
+    @IsOptional()
+    @IsString()
+    openingTime?: string;
+
+    @IsOptional()
+    @IsString()
+    closingTime?: string;
+
+    @IsOptional()
+    @IsString()
+    workingDays?: string;
+
+    @IsOptional()
+    @IsString()
+    imageUrl?: string;
+
+    @IsOptional()
+    isActive?: boolean;
+}
+
+export class UpdateBranchDto {
+    @IsOptional()
+    @IsString()
+    name?: string;
+
+    @IsOptional()
+    @IsString()
+    area?: string;
+
+    @IsOptional()
+    @IsString()
+    address?: string;
+
+    @IsOptional()
+    @IsString()
+    description?: string;
+
+    @IsOptional()
+    @IsString()
+    phone?: string;
+
+    @IsOptional()
+    @IsString()
+    email?: string;
+
+    @IsOptional()
+    @IsString()
+    googleMapsEmbed?: string;
+
+    @IsOptional()
+    @IsString()
+    openingTime?: string;
+
+    @IsOptional()
+    @IsString()
+    closingTime?: string;
+
+    @IsOptional()
+    @IsString()
+    workingDays?: string;
+
+    @IsOptional()
+    @IsString()
+    imageUrl?: string;
+
+    @IsOptional()
+    isActive?: boolean;
+}

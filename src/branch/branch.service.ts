@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateBranchReviewDto, AdminReplyDto } from './branch.dto';
+import { CreateBranchReviewDto, AdminReplyDto, CreateBranchDto, UpdateBranchDto } from './branch.dto';
 
 @Injectable()
 export class BranchService {
@@ -146,6 +146,43 @@ export class BranchService {
                 }
             },
             orderBy: { createdAt: 'desc' }
+        });
+    }
+
+    async create(dto: CreateBranchDto) {
+        const slug = dto.name.toLowerCase().replace(/ /g, '-') + '-' + dto.area.toLowerCase().replace(/ /g, '-');
+        return this.prisma.branch.create({
+            data: {
+                ...dto,
+                slug
+            }
+        });
+    }
+
+    async update(id: string, dto: UpdateBranchDto) {
+        let slug: string | undefined = undefined;
+        if (dto.name && dto.area) {
+            slug = dto.name.toLowerCase().replace(/ /g, '-') + '-' + dto.area.toLowerCase().replace(/ /g, '-');
+        } else if (dto.name || dto.area) {
+            const branch = await this.prisma.branch.findUnique({ where: { id } });
+            if (!branch) throw new NotFoundException('Branch not found');
+            const name = dto.name || branch.name;
+            const area = dto.area || branch.area;
+            slug = name.toLowerCase().replace(/ /g, '-') + '-' + area.toLowerCase().replace(/ /g, '-');
+        }
+
+        return this.prisma.branch.update({
+            where: { id },
+            data: {
+                ...dto,
+                ...(slug ? { slug } : {})
+            }
+        });
+    }
+
+    async remove(id: string) {
+        return this.prisma.branch.delete({
+            where: { id }
         });
     }
 }

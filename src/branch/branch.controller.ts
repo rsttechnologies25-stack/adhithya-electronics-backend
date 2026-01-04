@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Delete } from '@nestjs/common';
 import { BranchService } from './branch.service';
-import { CreateBranchReviewDto, AdminReplyDto } from './branch.dto';
+import { CreateBranchReviewDto, AdminReplyDto, CreateBranchDto, UpdateBranchDto } from './branch.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('branches')
@@ -36,7 +36,7 @@ export class BranchController {
         return this.branchService.createReview(slug, req.user.id, dto);
     }
 
-    // Protected - Admin reply (will check for ADMIN role in admin dashboard later)
+    // Protected - Admin reply
     @Post('reviews/:reviewId/reply')
     @UseGuards(JwtAuthGuard)
     addAdminReply(
@@ -44,5 +44,26 @@ export class BranchController {
         @Body() dto: AdminReplyDto
     ) {
         return this.branchService.addAdminReply(reviewId, dto);
+    }
+
+    // Admin - Create branch
+    @Post()
+    @UseGuards(JwtAuthGuard) // Add RoleGuard later to restrict to ADMIN
+    create(@Body() dto: CreateBranchDto) {
+        return this.branchService.create(dto);
+    }
+
+    // Admin - Update branch
+    @Patch(':id')
+    @UseGuards(JwtAuthGuard)
+    update(@Param('id') id: string, @Body() dto: UpdateBranchDto) {
+        return this.branchService.update(id, dto);
+    }
+
+    // Admin - Delete branch
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard)
+    remove(@Param('id') id: string) {
+        return this.branchService.remove(id);
     }
 }
