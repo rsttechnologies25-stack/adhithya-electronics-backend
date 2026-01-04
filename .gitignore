@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Database (SQLite - development only)
+*.db
+*.db-journal
+prisma/dev.db
+prisma/dev.db-journal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+temp/
+
+# Data export files (keep template, ignore actual exports)
+data-export-*.json
+
+# Uploaded files (if any)
+uploads/*
+!uploads/.gitkeep
