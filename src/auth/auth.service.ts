@@ -59,6 +59,7 @@ export class AuthService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
+        console.log(`[AUTH] Comparing password for ${dto.email}. Stored hash starts with: ${user.passwordHash?.substring(0, 10)}... Length: ${user.passwordHash?.length}`);
         const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
 
         if (!isPasswordValid) {
